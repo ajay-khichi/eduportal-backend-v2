@@ -1,3 +1,7 @@
 spring:
   application:
     name: eduportal-backend
+
+server:
+  port: 8082
+
