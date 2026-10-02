@@ -2,6 +2,7 @@ package in.ignishers.eduportal.security;
 
 import in.ignishers.eduportal.config.properties.JwtProperties;
 import in.ignishers.eduportal.models.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
@@ -57,12 +58,12 @@ public class JwtService {
         return extractAllClaims(token)
                 .get("role", String.class);
     }
-    public boolean isTokenValid(String token, UserPrincipal userPrincipal) {
+    public boolean isTokenValid(String token, UserDetails userDetails) {
 
         try {
             String email = extractEmail(token);
 
-            return email.equals(userPrincipal.getUsername())
+            return email.equals(userDetails.getUsername())
                     && !isTokenExpired(token);
 
         } catch (Exception e) {
