@@ -2,22 +2,24 @@ package in.ignishers.eduportal.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
-import java.io.IOException;
-import java.util.Map;
+import in.ignishers.eduportal.exception.ApiErrorResponse;
 
-@Component
-@RequiredArgsConstructor
+import java.io.IOException;
+
 public class RestAuthenticationEntryPoint
         implements AuthenticationEntryPoint {
 
     private final ObjectMapper objectMapper;
+
+    public RestAuthenticationEntryPoint(
+            ObjectMapper objectMapper
+    ) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void commence(
@@ -26,16 +28,22 @@ public class RestAuthenticationEntryPoint
             AuthenticationException authException
     ) throws IOException {
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiErrorResponse errorResponse =
+                new ApiErrorResponse(
+                        401,
+                        "Unauthorized",
+                        "Authentication is required"
+                );
 
-        Map<String, Object> body = Map.of(
-                "status", 401,
-                "error", "Unauthorized",
-                "message", "Authentication is required",
-                "path", request.getRequestURI()
+        response.setStatus(
+                HttpServletResponse.SC_UNAUTHORIZED
         );
 
-        objectMapper.writeValue(response.getOutputStream(), body);
+        response.setContentType("application/json");
+
+        objectMapper.writeValue(
+                response.getWriter(),
+                errorResponse
+        );
     }
 }

@@ -88,4 +88,11 @@ public class JwtService {
                 .parseSignedClaims(token)
                 .getPayload();
     }
+    public long getAccessTokenExpirationSeconds() {
+        return jwtProperties.getAccessTokenExpiration() / 1000;
+    }
+
+    public long getRefreshTokenExpiration() {
+        return jwtProperties.getRefreshTokenExpiration();
+    }
 }

@@ -1,23 +1,24 @@
 package in.ignishers.eduportal.security;
 
+import in.ignishers.eduportal.exception.ApiErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
-import org.springframework.stereotype.Component;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.util.Map;
 
-@Component
-@RequiredArgsConstructor
 public class RestAccessDeniedHandler
         implements AccessDeniedHandler {
 
     private final ObjectMapper objectMapper;
+
+    public RestAccessDeniedHandler(
+            ObjectMapper objectMapper
+    ) {
+        this.objectMapper = objectMapper;
+    }
 
     @Override
     public void handle(
@@ -26,16 +27,22 @@ public class RestAccessDeniedHandler
             AccessDeniedException accessDeniedException
     ) throws IOException {
 
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        ApiErrorResponse errorResponse =
+                new ApiErrorResponse(
+                        403,
+                        "Forbidden",
+                        "You do not have permission to access this resource"
+                );
 
-        Map<String, Object> body = Map.of(
-                "status", 403,
-                "error", "Forbidden",
-                "message", "You do not have permission to access this resource",
-                "path", request.getRequestURI()
+        response.setStatus(
+                HttpServletResponse.SC_FORBIDDEN
         );
 
-        objectMapper.writeValue(response.getOutputStream(), body);
+        response.setContentType("application/json");
+
+        objectMapper.writeValue(
+                response.getWriter(),
+                errorResponse
+        );
     }
 }
