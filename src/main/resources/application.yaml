@@ -80,7 +80,7 @@ spring:
 logging:
   level:
     root: INFO
-    com.ignishers: DEBUG
+    in.ignishers: DEBUG
     org.hibernate.sql: DEBUG
     org.springframework.security: INFO
 
@@ -102,6 +102,6 @@ spring:
 logging:
   level:
     root: WARN
-    com.ignishers: INFO
+    in.ignishers: INFO
     org.springframework.security: WARN
 
