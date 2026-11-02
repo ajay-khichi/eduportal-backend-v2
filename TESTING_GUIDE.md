@@ -151,7 +151,7 @@ package in.ignishers.eduportal.security;
 
 import in.ignishers.eduportal.config.properties.JwtProperties;
 import in.ignishers.eduportal.enums.UserRole;
-import in.ignishers.eduportal.models.User;
+import in.ignishers.eduportal.models.auth.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -168,8 +168,8 @@ class JwtServiceTest {
     private JwtProperties jwtProperties;
     private User testUser;
 
-    private static final String TEST_SECRET = 
-        "404E635266556A586E3272357538782F413F4428472B4B6250645367566B59703273357638792F423F4528482B4D6251";
+    private static final String TEST_SECRET =
+            "404E635266556A586E3272357538782F413F4428472B4B6250645367566B59703273357638792F423F4528482B4D6251";
 
     @BeforeEach
     void setUp() {
@@ -257,6 +257,7 @@ Controller layer par invalid request payload block hona chahiye. Ise `jakarta.va
 ```java
 package in.ignishers.eduportal.auth.dto;
 
+import in.ignishers.eduportal.dto.auth.RegisterRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
@@ -331,7 +332,6 @@ Check karein ki custom exceptions sahi HTTP Status aur `ApiErrorResponse` struct
 package in.ignishers.eduportal.exception;
 
 import in.ignishers.eduportal.exception.custom.EmailAlreadyExistsException;
-import in.ignishers.eduportal.exception.custom.ResourceNotFoundException;
 import in.ignishers.eduportal.exception.custom.TokenRefreshException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -400,18 +400,19 @@ Service layer testing me real database ya external security engine ko call nahi 
 ```java
 package in.ignishers.eduportal.auth;
 
-import in.ignishers.eduportal.auth.dto.AuthResponse;
-import in.ignishers.eduportal.auth.dto.LoginRequest;
-import in.ignishers.eduportal.auth.dto.RefreshTokenRequest;
-import in.ignishers.eduportal.auth.dto.RegisterRequest;
+import in.ignishers.eduportal.dto.auth.AuthResponse;
+import in.ignishers.eduportal.dto.auth.LoginRequest;
+import in.ignishers.eduportal.dto.auth.RefreshTokenRequest;
+import in.ignishers.eduportal.dto.auth.RegisterRequest;
 import in.ignishers.eduportal.enums.UserRole;
 import in.ignishers.eduportal.exception.custom.EmailAlreadyExistsException;
 import in.ignishers.eduportal.exception.custom.TokenRefreshException;
-import in.ignishers.eduportal.models.RefreshToken;
-import in.ignishers.eduportal.models.User;
-import in.ignishers.eduportal.repos.RefreshTokenRepository;
-import in.ignishers.eduportal.repos.UserRepository;
+import in.ignishers.eduportal.models.auth.RefreshToken;
+import in.ignishers.eduportal.models.auth.User;
+import in.ignishers.eduportal.repos.auth.RefreshTokenRepository;
+import in.ignishers.eduportal.repos.auth.UserRepository;
 import in.ignishers.eduportal.security.JwtService;
+import in.ignishers.eduportal.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -456,7 +457,7 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
-    private User sampleUser;
+    private in.ignishers.eduportal.models.auth.User sampleUser;
 
     @BeforeEach
     void setUp() {
@@ -484,7 +485,7 @@ class AuthServiceTest {
                 u.setId(99L);
                 return u;
             });
-            when(jwtService.generateAccessToken(any(User.class))).thenReturn("mock_access_token");
+            when(jwtService.generateAccessToken(any(in.ignishers.eduportal.models.auth.User.class))).thenReturn("mock_access_token");
             when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(900L);
             when(jwtService.getRefreshTokenExpiration()).thenReturn(2592000000L);
 
@@ -497,16 +498,16 @@ class AuthServiceTest {
             assertEquals(900L, response.expiresIn());
 
             // Verify User persistence
-            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+            ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(in.ignishers.eduportal.models.auth.User.class);
             verify(userRepository).save(userCaptor.capture());
-            User saved = userCaptor.getValue();
+            in.ignishers.eduportal.models.auth.User saved = userCaptor.getValue();
             assertEquals("new.student@eduportal.in", saved.getEmail());
             assertEquals("encoded_pass", saved.getPasswordHash());
             assertEquals(UserRole.STUDENT, saved.getRole());
             assertTrue(saved.isActive());
 
             // Verify Refresh Token was persisted with hashed value
-            verify(refreshTokenRepository).save(any(RefreshToken.class));
+            verify(refreshTokenRepository).save(any(in.ignishers.eduportal.models.auth.RefreshToken.class));
         }
 
         @Test
@@ -544,7 +545,7 @@ class AuthServiceTest {
             assertNotNull(response);
             assertEquals("new_access_token", response.accessToken());
             verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-            verify(refreshTokenRepository).save(any(RefreshToken.class));
+            verify(refreshTokenRepository).save(any(in.ignishers.eduportal.models.auth.RefreshToken.class));
         }
 
         @Test
@@ -569,7 +570,7 @@ class AuthServiceTest {
         void shouldRotateTokenSuccessfully() {
             RefreshTokenRequest request = new RefreshTokenRequest("raw_client_refresh_token");
 
-            RefreshToken storedToken = new RefreshToken();
+            RefreshToken storedToken = new in.ignishers.eduportal.models.auth.RefreshToken();
             storedToken.setId(5L);
             storedToken.setUser(sampleUser);
             storedToken.setTokenHash("some_sha256_hash");
@@ -591,7 +592,7 @@ class AuthServiceTest {
             verify(refreshTokenRepository).save(storedToken);
 
             // New token persisted
-            verify(refreshTokenRepository, times(2)).save(any(RefreshToken.class));
+            verify(refreshTokenRepository, times(2)).save(any(in.ignishers.eduportal.models.auth.RefreshToken.class));
         }
 
         @Test
@@ -599,7 +600,7 @@ class AuthServiceTest {
         void shouldRejectRevokedToken() {
             RefreshTokenRequest request = new RefreshTokenRequest("already_revoked_token");
 
-            RefreshToken storedToken = new RefreshToken();
+            in.ignishers.eduportal.models.auth.RefreshToken storedToken = new in.ignishers.eduportal.models.auth.RefreshToken();
             storedToken.setRevoked(true); // REVOKED
             storedToken.setExpiresAt(Instant.now().plus(5, ChronoUnit.DAYS));
 
@@ -613,7 +614,7 @@ class AuthServiceTest {
         void shouldRejectExpiredToken() {
             RefreshTokenRequest request = new RefreshTokenRequest("expired_token");
 
-            RefreshToken storedToken = new RefreshToken();
+            in.ignishers.eduportal.models.auth.RefreshToken storedToken = new in.ignishers.eduportal.models.auth.RefreshToken();
             storedToken.setRevoked(false);
             storedToken.setExpiresAt(Instant.now().minus(1, ChronoUnit.HOURS)); // EXPIRED
 
@@ -639,7 +640,8 @@ Database constraints (Unique constraints, soft delete flags, auto-generated IDs)
 package in.ignishers.eduportal.repos;
 
 import in.ignishers.eduportal.enums.UserRole;
-import in.ignishers.eduportal.models.User;
+import in.ignishers.eduportal.models.auth.User;
+import in.ignishers.eduportal.repos.auth.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -680,13 +682,13 @@ class UserRepositoryTest {
     @Test
     @DisplayName("Duplicate email insertion should violate unique constraint")
     void shouldEnforceEmailUniqueConstraint() {
-        User user1 = new User();
+        in.ignishers.eduportal.models.auth.User user1 = new in.ignishers.eduportal.models.auth.User();
         user1.setEmail("duplicate@eduportal.in");
         user1.setPasswordHash("hash1");
         user1.setRole(UserRole.STUDENT);
         entityManager.persistAndFlush(user1);
 
-        User user2 = new User();
+        User user2 = new in.ignishers.eduportal.models.auth.User();
         user2.setEmail("duplicate@eduportal.in"); // SAME EMAIL
         user2.setPasswordHash("hash2");
         user2.setRole(UserRole.FACULTY);
@@ -710,7 +712,7 @@ Security pipeline (AuthenticationEntryPoint 401, Public URLs permitAll, Protecte
 package in.ignishers.eduportal.security;
 
 import in.ignishers.eduportal.enums.UserRole;
-import in.ignishers.eduportal.models.User;
+import in.ignishers.eduportal.models.auth.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -749,7 +751,7 @@ class SecurityFilterChainIntegrationTest {
     @Test
     @DisplayName("Accessing protected endpoint with valid JWT should return 200 or proceed to controller")
     void shouldAllowAuthenticatedUserWithValidJwt() throws Exception {
-        User testUser = new User();
+        User testUser = new in.ignishers.eduportal.models.auth.User();
         testUser.setId(10L);
         testUser.setEmail("authenticated@eduportal.in");
         testUser.setRole(UserRole.STUDENT);
@@ -759,7 +761,7 @@ class SecurityFilterChainIntegrationTest {
 
         // Header format: Authorization: Bearer <token>
         mockMvc.perform(get("/api/users/me")
-                .header("Authorization", "Bearer " + validJwt))
+                        .header("Authorization", "Bearer " + validJwt))
                 // Returns 404 only because controller doesn't exist yet, but passes security!
                 // If security failed, it would have been 401.
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isNotEqualTo(401));

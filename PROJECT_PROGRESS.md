@@ -400,18 +400,18 @@ Har ek class, interface, enum aur configuration file ka exact internal code aur 
      - User ke sabhi active sessions terminate karne ke liye `refreshTokenRepository.deleteAllByUserId(userId)` trigger karta hai.
 
 #### 📄 `AuthResponse.java` (Record)
-- **Path**: `src/main/java/in/ignishers/eduportal/auth/dto/AuthResponse.java`
+- **Path**: `src/main/java/in/ignishers/eduportal/dto/auth/AuthResponse.java`
 - **Fields**: `String accessToken`, `String refreshToken`, `String tokenType` (e.g. "Bearer"), `long expiresIn` (seconds).
 
 #### 📄 `LoginRequest.java` (Record)
-- **Path**: `src/main/java/in/ignishers/eduportal/auth/dto/LoginRequest.java`
+- **Path**: `src/main/java/in/ignishers/eduportal/dto/auth/LoginRequest.java`
 - **Validation**:
   - `@NotBlank(message = "Email is required")`
   - `@Email(message = "Please provide a valid email address")`
   - `@NotBlank(message = "Password is required")`
 
 #### 📄 `RegisterRequest.java` (Record)
-- **Path**: `src/main/java/in/ignishers/eduportal/auth/dto/RegisterRequest.java`
+- **Path**: `src/main/java/in/ignishers/eduportal/dto/auth/RegisterRequest.java`
 - **Validation**:
   - `@NotBlank(message = "Email is required")`
   - `@Email(message = "Please provide a valid email address")`
@@ -419,7 +419,7 @@ Har ek class, interface, enum aur configuration file ka exact internal code aur 
   - `@Size(min = 8, max = 24, message = "Password must be between 8 and 24 characters")`
 
 #### 📄 `RefreshTokenRequest.java` (Record)
-- **Path**: `src/main/java/in/ignishers/eduportal/auth/dto/RefreshTokenRequest.java`
+- **Path**: `src/main/java/in/ignishers/eduportal/dto/auth/RefreshTokenRequest.java`
 - **Validation**:
   - `@NotBlank(message = "Refresh token is required")`
 

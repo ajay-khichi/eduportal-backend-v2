@@ -1,6 +1,6 @@
 package in.ignishers.eduportal.security;
 
-import in.ignishers.eduportal.models.User;
+import in.ignishers.eduportal.models.auth.User;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

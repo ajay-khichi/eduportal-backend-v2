@@ -1,10 +1,10 @@
 package in.ignishers.eduportal.controller;
 
-import in.ignishers.eduportal.auth.AuthService;
-import in.ignishers.eduportal.auth.dto.AuthResponse;
-import in.ignishers.eduportal.auth.dto.LoginRequest;
-import in.ignishers.eduportal.auth.dto.RefreshTokenRequest;
-import in.ignishers.eduportal.auth.dto.RegisterRequest;
+import in.ignishers.eduportal.service.AuthService;
+import in.ignishers.eduportal.dto.auth.AuthResponse;
+import in.ignishers.eduportal.dto.auth.LoginRequest;
+import in.ignishers.eduportal.dto.auth.RefreshTokenRequest;
+import in.ignishers.eduportal.dto.auth.RegisterRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

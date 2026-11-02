@@ -1,7 +1,7 @@
 package in.ignishers.eduportal.security;
 
-import in.ignishers.eduportal.models.User;
-import in.ignishers.eduportal.repos.UserRepository;
+import in.ignishers.eduportal.models.auth.User;
+import in.ignishers.eduportal.repos.auth.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;

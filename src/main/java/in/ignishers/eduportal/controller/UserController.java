@@ -1,8 +1,8 @@
 package in.ignishers.eduportal.controller;
 
-import in.ignishers.eduportal.auth.AuthService;
-import in.ignishers.eduportal.auth.dto.ChangePasswordRequest;
-import in.ignishers.eduportal.auth.dto.UserProfileResponse;
+import in.ignishers.eduportal.service.AuthService;
+import in.ignishers.eduportal.dto.user.ChangePasswordRequest;
+import in.ignishers.eduportal.dto.user.UserProfileResponse;
 import in.ignishers.eduportal.security.UserPrincipal;
 import in.ignishers.eduportal.service.UserService;
 import jakarta.validation.Valid;

@@ -1,7 +1,7 @@
 package in.ignishers.eduportal.security;
 
 import in.ignishers.eduportal.config.properties.JwtProperties;
-import in.ignishers.eduportal.models.User;
+import in.ignishers.eduportal.models.auth.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

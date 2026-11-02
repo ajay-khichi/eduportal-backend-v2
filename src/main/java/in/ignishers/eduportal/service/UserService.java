@@ -1,11 +1,10 @@
 package in.ignishers.eduportal.service;
 
-import in.ignishers.eduportal.auth.AuthService;
-import in.ignishers.eduportal.auth.dto.ChangePasswordRequest;
-import in.ignishers.eduportal.auth.dto.UserProfileResponse;
+import in.ignishers.eduportal.dto.user.ChangePasswordRequest;
+import in.ignishers.eduportal.dto.user.UserProfileResponse;
 import in.ignishers.eduportal.exception.custom.ResourceNotFoundException;
-import in.ignishers.eduportal.models.User;
-import in.ignishers.eduportal.repos.UserRepository;
+import in.ignishers.eduportal.models.auth.User;
+import in.ignishers.eduportal.repos.auth.UserRepository;
 import in.ignishers.eduportal.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
