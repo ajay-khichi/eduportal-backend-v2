@@ -146,6 +146,11 @@ public class AuthService {
                 });
     }
 
+    @Transactional
+    public void revokeAllUserTokens (Long userId) {
+        refreshTokenRepository.deleteAllByUserId(userId);
+    }
+
     private AuthResponse createAuthResponse(User user) {
 
         String accessToken =
