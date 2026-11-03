@@ -42,4 +42,8 @@ public class Department extends SoftDeletableEntity {
 
     @OneToMany(mappedBy = "department")
     private List<DepartmentProgram> programs = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "hod_faculty_id")
+    private Faculty headOfDepartment;
 }

@@ -1,7 +1,8 @@
 package in.ignishers.eduportal.enums;
 
 public enum UserRole {
-    ADMIN,
+    SUPER_ADMIN,
+    COLLEGE_ADMIN,
     FACULTY,
     STUDENT
 }

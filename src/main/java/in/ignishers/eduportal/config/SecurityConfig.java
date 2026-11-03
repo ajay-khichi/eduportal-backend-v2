@@ -34,15 +34,10 @@ public class SecurityConfig {
 
     private final CorsProperties corsProperties;
     private final SecurityProperties securityProperties;
-
     private final UserPrincipalService userPrincipalService;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-
-    private final RestAuthenticationEntryPoint
-            authenticationEntryPoint;
-
-    private final RestAccessDeniedHandler
-            accessDeniedHandler;
+    private final RestAuthenticationEntryPoint authenticationEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -103,6 +98,7 @@ public class SecurityConfig {
     }
 
     @Bean
+    @SuppressWarnings("java:S4502") // Suppressed: Stateless JWT API using Bearer headers (immune to CSRF)
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             AuthenticationProvider authenticationProvider,

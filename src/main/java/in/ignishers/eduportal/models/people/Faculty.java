@@ -1,5 +1,6 @@
 package in.ignishers.eduportal.models.people;
 
+import in.ignishers.eduportal.enums.FacultyRole;
 import in.ignishers.eduportal.models.SoftDeletableEntity;
 import in.ignishers.eduportal.models.auth.User;
 import in.ignishers.eduportal.models.institutional.College;
@@ -51,6 +52,10 @@ public class Faculty extends SoftDeletableEntity {
 
     @Column(length = 100)
     private String designation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "faculty_role", nullable = false, length = 30)
+    private FacultyRole role = FacultyRole.TEACHER;
 
     @OneToMany(mappedBy = "faculty")
     private List<TeachingAssignment> teachingAssignments = new ArrayList<>();
