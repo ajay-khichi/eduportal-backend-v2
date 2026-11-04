@@ -3,8 +3,7 @@ package in.ignishers.eduportal.models.curriculum;
 import in.ignishers.eduportal.models.SoftDeletableEntity;
 import in.ignishers.eduportal.models.institutional.DepartmentProgram;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
@@ -18,6 +17,9 @@ import lombok.Setter;
                 )
         }
 )
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Subject extends SoftDeletableEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -2,13 +2,15 @@ package in.ignishers.eduportal.models.institutional;
 
 import in.ignishers.eduportal.models.SoftDeletableEntity;
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "programs")
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Program extends SoftDeletableEntity {
 
     @Column(nullable = false, unique = true, length = 100)
