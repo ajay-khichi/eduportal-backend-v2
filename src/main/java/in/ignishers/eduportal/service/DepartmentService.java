@@ -111,7 +111,7 @@ public class DepartmentService {
     }
 
     private Faculty findAndPromoteHod(String email, Long collegeId) {
-        Faculty faculty = facultyRepo.findByUserEmail(email)
+        Faculty faculty = facultyRepo.findByUserEmailIgnoreCaseAndDeletedFalse(email)
                 .orElseThrow( () -> new ResourceNotFoundException("Faculty not found with email: "+ email));
 
         if(!faculty.getCollege().getId().equals(collegeId)) {

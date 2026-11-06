@@ -13,6 +13,7 @@ import in.ignishers.eduportal.repos.auth.RefreshTokenRepository;
 import in.ignishers.eduportal.repos.auth.UserRepository;
 import in.ignishers.eduportal.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -36,10 +37,18 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
+    @Value("${app.auth.public-registration-enabled}")
+    private boolean publicRegistrationEnabled;
+
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        if (!publicRegistrationEnabled) {
+            throw new IllegalArgumentException(
+                    "Public registration is currently disabled. Please contact your college administrator."
+            );
+        }
 
         String email = normalizeEmail(request.email());
 
