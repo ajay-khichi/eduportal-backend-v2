@@ -62,10 +62,24 @@ app:
     - /auth/register
     - /auth/refresh
     - /public/**
+    - /v3/api-docs/**
+    - /swagger-ui/**
+    - /swagger-ui.html
+    - /actuator/health
   jwt:
     secret: ${JWT_SECRET}
     access-token-expiration: 900000
     refresh-token-expiration: 2592000000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+
 logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
