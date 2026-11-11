@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Getter
@@ -33,6 +34,14 @@ public class AttendanceSession extends BaseEntity {
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(precision = 10, scale = 7)
+    private BigDecimal longitude;
+
+    private Integer radiusMeters;
 
     @Column(nullable = false)
     private boolean active = true;

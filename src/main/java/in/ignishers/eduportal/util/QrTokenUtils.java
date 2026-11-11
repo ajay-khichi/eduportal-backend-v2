@@ -1,0 +1,114 @@
+package in.ignishers.eduportal.util;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.Base64;
+import java.util.HexFormat;
+
+public final class QrTokenUtils {
+
+    private static final String HMAC_ALGORITHM = "HmacSHA256";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    public static final int DEFAULT_STEP_SECONDS = 15;
+
+    private QrTokenUtils() {
+    }
+
+    /**
+     * Generates a cryptographically strong 256-bit (64 hex chars) session secret.
+     */
+    public static String generateSecret() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return HexFormat.of().formatHex(bytes);
+    }
+
+    /**
+     * Generates a rolling time-stepped QR token for an attendance session.
+     * Format: <sessionId>.<timeStep>.<hmacSignature>
+     */
+    public static String generateRollingToken(Long sessionId, String secret, int stepSeconds) {
+        long timeStep = Instant.now().getEpochSecond() / stepSeconds;
+        String payload = sessionId + ":" + timeStep;
+        String signature = computeHmac(payload, secret);
+        return sessionId + "." + timeStep + "." + signature;
+    }
+
+    /**
+     * Extracts the AttendanceSession ID from a QR token without verifying signature yet.
+     */
+    public static Long extractSessionId(String qrToken) {
+        if (qrToken == null || qrToken.isBlank()) {
+            throw new IllegalArgumentException("QR token cannot be empty");
+        }
+        String[] parts = qrToken.trim().split("\\.");
+        if (parts.length != 3) {
+            throw new IllegalArgumentException("Invalid QR token format");
+        }
+        try {
+            return Long.parseLong(parts[0]);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid session ID in QR token");
+        }
+    }
+
+    /**
+     * Verifies a scanned QR token against the session secret and current time window.
+     * Allows current window and 1 previous window (grace period for scanning right on rollover).
+     */
+    public static boolean verifyRollingToken(Long expectedSessionId, String secret, String qrToken, int stepSeconds) {
+        if (qrToken == null || qrToken.isBlank() || secret == null) {
+            return false;
+        }
+
+        String[] parts = qrToken.trim().split("\\.");
+        if (parts.length != 3) {
+            return false;
+        }
+
+        long tokenSessionId;
+        long tokenStep;
+        try {
+            tokenSessionId = Long.parseLong(parts[0]);
+            tokenStep = Long.parseLong(parts[1]);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+
+        if (!expectedSessionId.equals(tokenSessionId)) {
+            return false;
+        }
+
+        long currentStep = Instant.now().getEpochSecond() / stepSeconds;
+        // Accept only current time window or immediately preceding window (prevents old screenshot replay)
+        if (tokenStep < currentStep - 1 || tokenStep > currentStep) {
+            return false;
+        }
+
+        String payload = tokenSessionId + ":" + tokenStep;
+        String expectedSignature = computeHmac(payload, secret);
+
+        return MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                parts[2].getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private static String computeHmac(String payload, String secret) {
+        try {
+            Mac mac = Mac.getInstance(HMAC_ALGORITHM);
+            SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
+            mac.init(keySpec);
+            byte[] rawHmac = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(rawHmac);
+        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            throw new IllegalStateException("Failed to compute HMAC signature for QR token", e);
+        }
+    }
+}
