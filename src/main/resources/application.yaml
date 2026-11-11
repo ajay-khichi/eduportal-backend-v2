@@ -37,6 +37,7 @@ app:
     public-registration-enabled: ${PUBLIC_REGISTRATION_ENABLED:false}
   attendance:
     qr-step-seconds: ${ATTENDANCE_QR_STEP_SECONDS:5}
+    checkin-window-seconds: ${ATTENDANCE_CHECKIN_WINDOW_SECONDS:20}
     face-similarity-threshold: ${ATTENDANCE_FACE_THRESHOLD:0.75}
     default-geofence-radius-meters: ${ATTENDANCE_DEFAULT_RADIUS_METERS:100}
   cors:

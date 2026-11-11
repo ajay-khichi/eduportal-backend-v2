@@ -8,9 +8,9 @@ import jakarta.validation.constraints.NotEmpty;
 import java.math.BigDecimal;
 import java.util.List;
 
-public record MarkAttendanceRequest(
-        @NotBlank(message = "QR token is required")
-        String qrToken,
+public record CompleteAttendanceRequest(
+        @NotBlank(message = "Challenge token is required")
+        String challengeToken,
 
         @DecimalMin(value = "-90.0", message = "Latitude must be >= -90")
         @DecimalMax(value = "90.0", message = "Latitude must be <= 90")

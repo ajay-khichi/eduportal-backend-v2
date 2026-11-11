@@ -44,6 +44,9 @@ public class AttendanceService {
     @Value("${app.attendance.qr-step-seconds:5}")
     private int qrStepSeconds;
 
+    @Value("${app.attendance.checkin-window-seconds:20}")
+    private int checkinWindowSeconds;
+
     @Value("${app.attendance.face-similarity-threshold:0.75}")
     private double faceSimilarityThreshold;
 
@@ -130,8 +133,13 @@ public class AttendanceService {
         return toSessionResponse(session);
     }
 
+    /**
+     * Phase 1 of Two-Step Check-In:
+     * Instantly validates the 5-second rolling QR, records a PENDING verification state,
+     * and issues a 20-second student-bound HMAC challenge token for GPS + Face scan.
+     */
     @Transactional
-    public MarkAttendanceResponse markAttendance(Long studentUserId, MarkAttendanceRequest request) {
+    public VerifyQrResponse verifyQrAndStartChallenge(Long studentUserId, VerifyQrRequest request) {
         Long sessionId = QrTokenUtils.extractSessionId(request.qrToken());
         AttendanceSession session = sessionRepo.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attendance session not found"));
@@ -150,13 +158,93 @@ public class AttendanceService {
             throw new AccessDeniedException("You are not enrolled in this class section");
         }
 
-        if (attendanceRepo.existsByClassSessionIdAndStudentId(classSession.getId(), student.getId())) {
+        if (!QrTokenUtils.verifyRollingToken(session.getId(), session.getSecret(), request.qrToken(), qrStepSeconds)) {
+            throw new IllegalArgumentException("QR code is invalid or expired. Please scan the live QR again");
+        }
+
+        Attendance attendance = attendanceRepo.findByClassSessionIdAndStudentId(classSession.getId(), student.getId())
+                .orElseGet(() -> {
+                    Attendance created = new Attendance();
+                    created.setClassSession(classSession);
+                    created.setStudent(student);
+                    return created;
+                });
+
+        if (attendance.getId() != null && attendance.getVerification() != null
+                && attendance.getVerification().getStatus() == VerificationStatus.VERIFIED) {
             throw new IllegalArgumentException("Attendance is already marked for this class");
         }
 
-        // Factor 1: Rolling 5-second QR verification
-        if (!QrTokenUtils.verifyRollingToken(session.getId(), session.getSecret(), request.qrToken(), qrStepSeconds)) {
-            throw new IllegalArgumentException("QR code is invalid or expired. Please scan the live QR again");
+        // Remains ABSENT + PENDING until Phase 2 (GPS + Face) succeeds within 20s
+        attendance.setStatus(AttendanceStatus.ABSENT);
+        attendance.setMarkedAt(now);
+
+        AttendanceVerification verification = attendance.getVerification();
+        if (verification == null) {
+            verification = new AttendanceVerification();
+            verification.setAttendance(attendance);
+            attendance.setVerification(verification);
+        }
+        verification.setQrVerified(true);
+        verification.setFaceVerified(false);
+        verification.setStatus(VerificationStatus.PENDING);
+        verification.setVerifiedAt(null);
+
+        attendance = attendanceRepo.save(attendance);
+
+        String challengeToken = QrTokenUtils.generateChallengeToken(
+                attendance.getId(),
+                student.getId(),
+                session.getId(),
+                checkinWindowSeconds,
+                session.getSecret()
+        );
+
+        return new VerifyQrResponse(challengeToken, checkinWindowSeconds);
+    }
+
+    /**
+     * Phase 2 of Two-Step Check-In:
+     * Must be completed within 20 seconds of Phase 1. Validates the student-bound challenge token,
+     * checks GPS Haversine geofence and Face Cosine Similarity, and finalizes attendance as PRESENT.
+     */
+    @Transactional
+    public MarkAttendanceResponse completeAttendanceCheckIn(Long studentUserId, CompleteAttendanceRequest request) {
+        QrTokenUtils.ChallengePayload challenge = QrTokenUtils.parseChallengeToken(request.challengeToken());
+
+        Student student = studentRepo.findByUserIdAndDeletedFalse(studentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Student profile not found for current user"));
+
+        if (!challenge.studentId().equals(student.getId())) {
+            throw new AccessDeniedException("Challenge token does not belong to the authenticated student");
+        }
+
+        AttendanceSession session = sessionRepo.findById(challenge.sessionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Attendance session not found"));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (!session.isActive() || now.isAfter(session.getExpiresAt())) {
+            throw new IllegalArgumentException("Attendance session is closed or expired");
+        }
+
+        if (!QrTokenUtils.verifyChallengeToken(challenge, student.getId(), session.getSecret())) {
+            throw new IllegalArgumentException("Verification window expired or challenge invalid. Please scan QR again");
+        }
+
+        Attendance attendance = attendanceRepo.findById(challenge.attendanceId())
+                .orElseThrow(() -> new ResourceNotFoundException("Pending attendance record not found"));
+
+        if (!attendance.getStudent().getId().equals(student.getId())
+                || !attendance.getClassSession().getId().equals(session.getClassSession().getId())) {
+            throw new AccessDeniedException("Challenge does not match pending attendance record");
+        }
+
+        AttendanceVerification verification = attendance.getVerification();
+        if (verification == null || !verification.isQrVerified()) {
+            throw new IllegalArgumentException("QR verification step must be completed first");
+        }
+        if (verification.getStatus() == VerificationStatus.VERIFIED) {
+            throw new IllegalArgumentException("Attendance has already been completed");
         }
 
         // Factor 2: GPS Geofence (Haversine)
@@ -165,27 +253,20 @@ public class AttendanceService {
         // Factor 3: Face Biometrics (Cosine Similarity)
         double similarity = verifyFaceBiometrics(student.getId(), request.faceEmbedding());
 
-        Attendance attendance = new Attendance();
-        attendance.setClassSession(classSession);
-        attendance.setStudent(student);
         attendance.setStatus(AttendanceStatus.PRESENT);
         attendance.setMarkedAt(now);
 
-        AttendanceVerification verification = new AttendanceVerification();
-        verification.setAttendance(attendance);
-        verification.setQrVerified(true);
         verification.setLatitude(request.latitude());
         verification.setLongitude(request.longitude());
         verification.setFaceVerified(true);
         verification.setStatus(VerificationStatus.VERIFIED);
         verification.setVerifiedAt(now);
 
-        attendance.setVerification(verification);
         attendance = attendanceRepo.save(attendance);
 
         return new MarkAttendanceResponse(
                 attendance.getId(),
-                classSession.getId(),
+                attendance.getClassSession().getId(),
                 attendance.getStatus(),
                 verification.getStatus(),
                 true,

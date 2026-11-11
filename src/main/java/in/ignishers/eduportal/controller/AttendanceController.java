@@ -50,14 +50,24 @@ public class AttendanceController {
                 attendanceService.stopSession(sessionId, principal.getId(), isAdmin(principal)));
     }
 
-    @PostMapping("/attendance/mark")
+    @PostMapping("/attendance/verify-qr")
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseEntity<MarkAttendanceResponse> markAttendance(
+    public ResponseEntity<VerifyQrResponse> verifyQr(
             @AuthenticationPrincipal UserPrincipal principal,
-            @Valid @RequestBody MarkAttendanceRequest request
+            @Valid @RequestBody VerifyQrRequest request
+    ) {
+        return ResponseEntity.ok(
+                attendanceService.verifyQrAndStartChallenge(principal.getId(), request));
+    }
+
+    @PostMapping("/attendance/complete")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<MarkAttendanceResponse> completeAttendance(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody CompleteAttendanceRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(attendanceService.markAttendance(principal.getId(), request));
+                .body(attendanceService.completeAttendanceCheckIn(principal.getId(), request));
     }
 
     @PostMapping("/class-sessions/{classId}/attendance/manual")

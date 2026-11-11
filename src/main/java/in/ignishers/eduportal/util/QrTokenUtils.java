@@ -16,11 +16,19 @@ public final class QrTokenUtils {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    private static final int SIGNATURE_BYTES = 12; // 96-bit MAC = 16 Base64URL chars (compact QR, unforgeable in 5s window)
+    private static final int SIGNATURE_BYTES = 12; // 96-bit MAC = 16 Base64URL chars
     public static final int DEFAULT_STEP_SECONDS = 5;
 
     private QrTokenUtils() {
     }
+
+    public record ChallengePayload(
+            Long attendanceId,
+            Long studentId,
+            Long sessionId,
+            long expiresAtEpochSec,
+            String signature
+    ) {}
 
     /**
      * Generates a cryptographically strong 256-bit (64 hex chars) session secret.
@@ -106,6 +114,67 @@ public final class QrTokenUtils {
         return MessageDigest.isEqual(
                 expectedSignature.getBytes(StandardCharsets.UTF_8),
                 parts[2].getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    /**
+     * Issues a short-lived, student-bound challenge token after QR verification succeeds.
+     * Format: <attendanceId>.<studentId>.<sessionId>.<expiresAtEpochSec>.<hmacSignature>
+     */
+    public static String generateChallengeToken(
+            Long attendanceId,
+            Long studentId,
+            Long sessionId,
+            int ttlSeconds,
+            String secret
+    ) {
+        long expiresAt = Instant.now().getEpochSecond() + ttlSeconds;
+        String payload = "CHAL:" + attendanceId + ":" + studentId + ":" + sessionId + ":" + expiresAt;
+        String signature = computeCompactHmac(payload, secret);
+        return attendanceId + "." + studentId + "." + sessionId + "." + expiresAt + "." + signature;
+    }
+
+    /**
+     * Parses a challenge token so the caller can fetch the session secret for signature verification.
+     */
+    public static ChallengePayload parseChallengeToken(String challengeToken) {
+        if (challengeToken == null || challengeToken.isBlank()) {
+            throw new IllegalArgumentException("Challenge token cannot be empty");
+        }
+        String[] parts = challengeToken.trim().split("\\.");
+        if (parts.length != 5) {
+            throw new IllegalArgumentException("Invalid challenge token format");
+        }
+        try {
+            return new ChallengePayload(
+                    Long.parseLong(parts[0]),
+                    Long.parseLong(parts[1]),
+                    Long.parseLong(parts[2]),
+                    Long.parseLong(parts[3]),
+                    parts[4]
+            );
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Malformed challenge token values");
+        }
+    }
+
+    /**
+     * Verifies challenge signature, student binding, and 20-second expiry window.
+     */
+    public static boolean verifyChallengeToken(ChallengePayload challenge, Long expectedStudentId, String secret) {
+        if (challenge == null || secret == null || !challenge.studentId().equals(expectedStudentId)) {
+            return false;
+        }
+        if (Instant.now().getEpochSecond() > challenge.expiresAtEpochSec()) {
+            return false;
+        }
+        String payload = "CHAL:" + challenge.attendanceId() + ":" + challenge.studentId()
+                + ":" + challenge.sessionId() + ":" + challenge.expiresAtEpochSec();
+        String expectedSignature = computeCompactHmac(payload, secret);
+
+        return MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                challenge.signature().getBytes(StandardCharsets.UTF_8)
         );
     }
 
