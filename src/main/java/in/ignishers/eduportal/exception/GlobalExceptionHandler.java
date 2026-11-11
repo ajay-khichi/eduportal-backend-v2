@@ -5,6 +5,7 @@ import in.ignishers.eduportal.exception.custom.ResourceNotFoundException;
 import in.ignishers.eduportal.exception.custom.TokenRefreshException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
@@ -150,6 +151,21 @@ public class GlobalExceptionHandler {
                                 401,
                                 "Unauthorized",
                                 exception.getMessage()
+                        )
+                );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorResponse> handleAccessDenied(
+            AccessDeniedException exception
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(
+                        new ApiErrorResponse(
+                                403,
+                                "Forbidden",
+                                exception.getMessage() != null ? exception.getMessage() : "Access denied"
                         )
                 );
     }

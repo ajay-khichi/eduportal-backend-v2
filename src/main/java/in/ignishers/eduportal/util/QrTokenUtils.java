@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
 
@@ -15,7 +16,8 @@ public final class QrTokenUtils {
 
     private static final String HMAC_ALGORITHM = "HmacSHA256";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-    public static final int DEFAULT_STEP_SECONDS = 15;
+    private static final int SIGNATURE_BYTES = 12; // 96-bit MAC = 16 Base64URL chars (compact QR, unforgeable in 5s window)
+    public static final int DEFAULT_STEP_SECONDS = 5;
 
     private QrTokenUtils() {
     }
@@ -30,14 +32,22 @@ public final class QrTokenUtils {
     }
 
     /**
-     * Generates a rolling time-stepped QR token for an attendance session.
-     * Format: <sessionId>.<timeStep>.<hmacSignature>
+     * Generates a compact rolling time-stepped QR token for an attendance session.
+     * Format: <sessionId>.<timeStep>.<16-char-hmacSignature>
      */
     public static String generateRollingToken(Long sessionId, String secret, int stepSeconds) {
         long timeStep = Instant.now().getEpochSecond() / stepSeconds;
         String payload = sessionId + ":" + timeStep;
-        String signature = computeHmac(payload, secret);
+        String signature = computeCompactHmac(payload, secret);
         return sessionId + "." + timeStep + "." + signature;
+    }
+
+    /**
+     * Seconds remaining in the current QR time window (1..stepSeconds).
+     */
+    public static int secondsRemaining(int stepSeconds) {
+        long now = Instant.now().getEpochSecond();
+        return (int) (stepSeconds - (now % stepSeconds));
     }
 
     /**
@@ -59,7 +69,7 @@ public final class QrTokenUtils {
     }
 
     /**
-     * Verifies a scanned QR token against the session secret and current time window.
+     * Verifies a scanned QR token against the session secret and current 5-second window.
      * Allows current window and 1 previous window (grace period for scanning right on rollover).
      */
     public static boolean verifyRollingToken(Long expectedSessionId, String secret, String qrToken, int stepSeconds) {
@@ -86,13 +96,12 @@ public final class QrTokenUtils {
         }
 
         long currentStep = Instant.now().getEpochSecond() / stepSeconds;
-        // Accept only current time window or immediately preceding window (prevents old screenshot replay)
         if (tokenStep < currentStep - 1 || tokenStep > currentStep) {
             return false;
         }
 
         String payload = tokenSessionId + ":" + tokenStep;
-        String expectedSignature = computeHmac(payload, secret);
+        String expectedSignature = computeCompactHmac(payload, secret);
 
         return MessageDigest.isEqual(
                 expectedSignature.getBytes(StandardCharsets.UTF_8),
@@ -100,13 +109,14 @@ public final class QrTokenUtils {
         );
     }
 
-    private static String computeHmac(String payload, String secret) {
+    private static String computeCompactHmac(String payload, String secret) {
         try {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);
             SecretKeySpec keySpec = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM);
             mac.init(keySpec);
-            byte[] rawHmac = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(rawHmac);
+            byte[] fullHmac = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));
+            byte[] truncated = Arrays.copyOf(fullHmac, SIGNATURE_BYTES);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(truncated);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new IllegalStateException("Failed to compute HMAC signature for QR token", e);
         }
