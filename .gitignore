@@ -35,3 +35,5 @@ build/
 .env
 .env.local
 .env.*.local
+deploy/nginx/certs/*.pem
+deploy/nginx/certs/*.key

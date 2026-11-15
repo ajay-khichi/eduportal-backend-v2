@@ -1,0 +1,4 @@
+# Place Cloudflare Origin Certificate files here on the Oracle VM:
+#   origin.pem
+#   origin.key
+# Never commit real certificates or private keys to Git.

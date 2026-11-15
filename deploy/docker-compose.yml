@@ -1,0 +1,118 @@
+# Production Oracle Cloud ARM Ampere Compose Stack:
+# 1 Shared PostgreSQL + Reverse Proxy (Nginx + Cloudflare Origin SSL) + Eduportal (+ slots for App2 & App3)
+#
+# Expected VM folder layout (e.g. /opt/apps):
+#   /opt/apps/docker-compose.yml
+#   /opt/apps/init-dbs.sh
+#   /opt/apps/nginx/conf.d/default.conf
+#   /opt/apps/nginx/certs/origin.pem
+#   /opt/apps/nginx/certs/origin.key
+#   /opt/apps/.env
+
+services:
+  # --- Eduportal Backend Application ---
+  eduportal:
+    image: ${GHCR_IMAGE}
+    container_name: eduportal-backend
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      DB_URL: ${DB_URL:?DB_URL is required}
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME is required}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-5}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+      PUBLIC_REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION_ENABLED:-false}
+      ATTENDANCE_QR_STEP_SECONDS: ${ATTENDANCE_QR_STEP_SECONDS:-5}
+      ATTENDANCE_CHECKIN_WINDOW_SECONDS: ${ATTENDANCE_CHECKIN_WINDOW_SECONDS:-20}
+      ATTENDANCE_FACE_THRESHOLD: ${ATTENDANCE_FACE_THRESHOLD:-0.75}
+      ATTENDANCE_DEFAULT_RADIUS_METERS: ${ATTENDANCE_DEFAULT_RADIUS_METERS:-100}
+      JAVA_OPTS: ${EDUPORTAL_JAVA_OPTS:--Xms128m -Xmx280m -XX:MaxMetaspaceSize=110m -XX:+UseSerialGC}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/actuator/health >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 45s
+      retries: 3
+
+  # --- Local Postgres (Keep commented when using Supabase; uncomment later on Ampere VM) ---
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: shared-postgres
+  #   restart: unless-stopped
+  #   mem_limit: 1024m
+  #   environment:
+  #     POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+  #     POSTGRES_DB: postgres
+  #     EDUPORTAL_DB_NAME: ${EDUPORTAL_DB_NAME:-db_eduportal}
+  #     EDUPORTAL_DB_USER: ${EDUPORTAL_DB_USER:-eduportal_user}
+  #     EDUPORTAL_DB_PASSWORD: ${EDUPORTAL_DB_PASSWORD:?EDUPORTAL_DB_PASSWORD is required}
+  #   volumes:
+  #     - ${POSTGRES_DATA_DIR:-/mnt/pgdata/data}:/var/lib/postgresql/data
+  #     - ./init-dbs.sh:/docker-entrypoint-initdb.d/init-dbs.sh:ro
+  #   networks:
+  #     - app-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # --- Uncomment when deploying 2nd & 3rd Spring Boot apps ---
+  # app2:
+  #   image: ghcr.io/your-github-username/app2:latest
+  #   container_name: app2-backend
+  #   restart: unless-stopped
+  #   mem_limit: 768m
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: prod
+  #     DB_URL: jdbc:postgresql://postgres:5432/${APP2_DB_NAME:-app2_db}
+  #     DB_USERNAME: ${APP2_DB_USER:-app2_user}
+  #     DB_PASSWORD: ${APP2_DB_PASSWORD}
+  #     JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC
+  #   networks:
+  #     - app-network
+
+  # app3:
+  #   image: ghcr.io/your-github-username/app3:latest
+  #   container_name: app3-backend
+  #   restart: unless-stopped
+  #   mem_limit: 768m
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     SPRING_PROFILES_ACTIVE: prod
+  #     DB_URL: jdbc:postgresql://postgres:5432/${APP3_DB_NAME:-app3_db}
+  #     DB_USERNAME: ${APP3_DB_USER:-app3_user}
+  #     DB_PASSWORD: ${APP3_DB_PASSWORD}
+  #     JAVA_OPTS: -Xms256m -Xmx512m -XX:+UseG1GC
+  #   networks:
+  #     - app-network
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: shared-nginx
+    restart: unless-stopped
+    mem_limit: 128m
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

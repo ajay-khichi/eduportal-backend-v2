@@ -1,0 +1,46 @@
+# Standalone Docker Compose for local testing of Eduportal + PostgreSQL
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: eduportal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${EDUPORTAL_DB_NAME:-db_eduportal}
+      POSTGRES_USER: ${EDUPORTAL_DB_USER:-eduportal_user}
+      POSTGRES_PASSWORD: ${EDUPORTAL_DB_PASSWORD:-eduportal_dev_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - eduportal_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${EDUPORTAL_DB_USER:-eduportal_user} -d ${EDUPORTAL_DB_NAME:-db_eduportal}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  eduportal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: eduportal-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      JPA_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      DB_URL: jdbc:postgresql://postgres:5432/${EDUPORTAL_DB_NAME:-db_eduportal}
+      DB_USERNAME: ${EDUPORTAL_DB_USER:-eduportal_user}
+      DB_PASSWORD: ${EDUPORTAL_DB_PASSWORD:-eduportal_dev_pass}
+      DB_POOL_SIZE: ${DB_POOL_SIZE:-10}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      PUBLIC_REGISTRATION_ENABLED: ${PUBLIC_REGISTRATION_ENABLED:-false}
+      JAVA_OPTS: ${EDUPORTAL_JAVA_OPTS:--Xms256m -Xmx512m -XX:+UseG1GC}
+
+volumes:
+  eduportal_pgdata:
