@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Stage 1: Build executable JAR ---
-FROM eclipse-temurin:17-jdk-alpine AS builder
+FROM amazoncorretto:17-alpine AS builder
 WORKDIR /workspace
 
 # Cache Maven dependencies before copying application source
@@ -13,7 +13,7 @@ COPY src src
 RUN ./mvnw package -DskipTests -B
 
 # --- Stage 2: Minimal multi-arch JRE runtime ---
-FROM eclipse-temurin:17-jre-alpine AS runtime
+FROM amazoncorretto:17-alpine AS runtime
 WORKDIR /app
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
