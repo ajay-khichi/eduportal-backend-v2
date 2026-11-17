@@ -88,6 +88,7 @@ management:
         api-key: ${DATADOG_API_KEY:}
         application-key: ${DATADOG_APP_KEY:}
         uri: ${DATADOG_URI:https://api.datadoghq.com}
+        descriptions: ${DATADOG_DESCRIPTIONS:false}
         step: 1m
 
 logging:
