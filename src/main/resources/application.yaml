@@ -85,10 +85,9 @@ management:
     metrics:
       export:
         enabled: ${MANAGEMENT_DATADOG_METRICS_EXPORT_ENABLED:false}
-        api-key: ${DATADOG_API_KEY:}
+        api-key: ${DATADOG_API_KEY:dummy_key_for_test}
         application-key: ${DATADOG_APP_KEY:}
-        uri: ${DATADOG_URI:https://api.datadoghq.com}
-        descriptions: ${DATADOG_DESCRIPTIONS:false}
+        uri: ${DATADOG_URI:https://api.us5.datadoghq.com}
         step: 1m
 
 logging:
