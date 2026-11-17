@@ -6,9 +6,9 @@ spring:
 
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${JDBC_DATABASE_URL:${DB_URL}}
+    username: ${JDBC_DATABASE_USERNAME:${DB_USERNAME}}
+    password: ${JDBC_DATABASE_PASSWORD:${DB_PASSWORD}}
     hikari:
       maximum-pool-size: ${DB_POOL_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:2}
@@ -31,7 +31,7 @@ spring:
 
 
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   forward-headers-strategy: framework
   servlet:
     context-path: /api
@@ -45,7 +45,7 @@ app:
     face-similarity-threshold: ${ATTENDANCE_FACE_THRESHOLD:0.75}
     default-geofence-radius-meters: ${ATTENDANCE_DEFAULT_RADIUS_METERS:100}
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://10.14.217.39:5173}
     allowed-methods:
       - GET
       - POST
@@ -77,10 +77,18 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics
   endpoint:
     health:
       show-details: when_authorized
+  datadog:
+    metrics:
+      export:
+        enabled: ${MANAGEMENT_DATADOG_METRICS_EXPORT_ENABLED:false}
+        api-key: ${DATADOG_API_KEY:}
+        application-key: ${DATADOG_APP_KEY:}
+        uri: ${DATADOG_URI:https://api.datadoghq.com}
+        step: 1m
 
 logging:
   pattern:
